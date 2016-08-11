@@ -1,5 +1,6 @@
 package it4bi.ulb.barefoot;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,13 +19,11 @@ import com.bmwcarit.barefoot.matcher.Matcher;
 import com.bmwcarit.barefoot.matcher.MatcherCandidate;
 import com.bmwcarit.barefoot.matcher.MatcherKState;
 import com.bmwcarit.barefoot.matcher.MatcherSample;
-import com.bmwcarit.barefoot.matcher.MatcherTransition;
 import com.bmwcarit.barefoot.road.Configuration;
 import com.bmwcarit.barefoot.road.PostGISReader;
 import com.bmwcarit.barefoot.roadmap.Road;
 import com.bmwcarit.barefoot.roadmap.RoadMap;
 import com.bmwcarit.barefoot.roadmap.RoadPoint;
-import com.bmwcarit.barefoot.roadmap.Route;
 import com.bmwcarit.barefoot.roadmap.TimePriority;
 import com.bmwcarit.barefoot.spatial.Geography;
 import com.bmwcarit.barefoot.topology.Dijkstra;
@@ -68,27 +67,24 @@ public class MapMatchingCore {
 		// most likely sequence of positions
 	}
 
-	private static Map<Short, Tuple<Double, Integer>> getConfiguration(String config_file)
-			throws JSONException, IOException {
+	private static Map<Short, Tuple<Double, Integer>> getConfiguration(String config_file) throws JSONException, IOException {
 		Map<Short, Tuple<Double, Integer>> config = Configuration.read(config_file);
 		return config;
 	}
 
 	private static RoadMap createRoadMap(Map<Short, Tuple<Double, Integer>> config) {
-		RoadMap map = RoadMap.Load(new PostGISReader(
-									 Constants.HOSTNAME, 
-									 Constants.PORT, 
-									 Constants.DB, 
-									 Constants.TABLE,
-									 Constants.USERNAME, 
-									 Constants.PASSWORD, 
-									 config));
+		RoadMap map = RoadMap.Load(new PostGISReader(Constants.HOSTNAME, 
+													 Constants.PORT, 
+													 Constants.DB, 
+													 Constants.TABLE, 
+													 Constants.USERNAME, 
+													 Constants.PASSWORD, 
+													 config));
 		map.construct();
 		return map;
 	}
 
-	private static void mapMatchOnline(Matcher matcher, MatcherKState state, List<MatcherSample> samples,
-			String input_file, int input_type)
+	private static void mapMatchOnline(Matcher matcher, MatcherKState state, List<MatcherSample> samples, String input_file, int input_type)
 			throws IOException, ParseException, FileNotFoundException, JSONException {
 
 		if (input_type == 1) {
@@ -100,8 +96,21 @@ public class MapMatchingCore {
 				samples.add(new MatcherSample(new org.json.JSONObject(position.toJSONString())));
 
 			}
-		} else {
-			// Logic for CSV files
+		} else if (input_type == 2) {
+
+			String line = "";
+
+			BufferedReader br = new BufferedReader(new FileReader(input_file));
+			while ((line = br.readLine()) != null) {
+				// use comma as separator
+				String[] elements = line.split(Constants.COMMA_STRING);
+
+				Point current_point = new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[2]));
+				long current_time = Long.parseLong(elements[0]);
+				samples.add(new MatcherSample(current_time, current_point));
+
+			}
+
 		}
 
 		// Iterative map matching of sample batch (offline) or sample stream
@@ -111,19 +120,27 @@ public class MapMatchingCore {
 			state.update(vector, sample);
 
 			// Online map matching result
-			MatcherCandidate estimate = state.estimate(); // most likely position estimate
+			MatcherCandidate estimate = state.estimate(); // most likely
+															// position estimate
 
+			// if (estimate != null ){
 			long id = estimate.point().edge().id(); // road id
-			System.out.println("ROAD ID = " + id);
-			
-			// Check if the below code is required
+			System.out.println("Time = " + sample.time() + 
+								" X = " + sample.point().getX() + 
+								" Y = " + sample.point().getY()  + 
+								" INTERNAL ROAD ID = " + id );
+			// }else{
+			// System.out.println("No matches found");
+			// }
 
-			Point position = estimate.point().geometry(); // position
-			MatcherTransition transition = estimate.transition();
-			if (transition != null) {
-				// first point will have a null transition
-				Route route = transition.route(); // route to position
-			}
+			// Note: Check if the below code is required
+
+			/*
+			 * Point position = estimate.point().geometry(); // position
+			 * MatcherTransition transition = estimate.transition(); if
+			 * (transition != null) { // first point will have a null transition
+			 * Route route = transition.route(); // route to position }
+			 */
 		}
 	}
 }
