@@ -16,6 +16,11 @@ public class MapMatchingDriver {
 				input_type: '1' (For JSON input format)
 				input file: '/barefoot-master/src/test/resources/com/bmwcarit/barefoot/matcher/x0001-015.json'
 				config_file: '/barefoot-master/bfmap/road-types.json'
+				
+				other input types:
+				
+				'2': CSV input format
+				'3': CSV input format with multiple Object IDs in one file.
 			*/
 			MapMatchingCore core = new MapMatchingCore();
 			core.processMapMatching(input_type, input_file, config_file);

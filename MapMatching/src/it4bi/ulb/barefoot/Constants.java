@@ -14,6 +14,7 @@ public class Constants {
 	
 	// Other constants
 	public static final String COMMA_STRING = ",";
+	public static final String TAB_STRING = "\t";
 	
 	
 
